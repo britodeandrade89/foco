@@ -20,12 +20,10 @@
       * {
         font-family: 'Inter', sans-serif !important;
         -webkit-tap-highlight-color: transparent;
-        /* Ocultar barra de rolagem para IE, Edge e Firefox */
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
 
-      /* Ocultar barra de rolagem para Chrome, Safari e Opera */
       *::-webkit-scrollbar {
         display: none;
       }
@@ -40,7 +38,7 @@
       }
 
       @keyframes shake {
-        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        10%, 90! { transform: translate3d(-1px, 0, 0); }
         20%, 80% { transform: translate3d(2px, 0, 0); }
         30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
         40%, 60% { transform: translate3d(4px, 0, 0); }
@@ -61,6 +59,7 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "firebase/app": "https://esm.sh/firebase@11.1.0/app",
     "firebase/analytics": "https://esm.sh/firebase@11.1.0/analytics",
+    "firebase/messaging": "https://esm.sh/firebase@11.1.0/messaging",
     "firebase/": "https://esm.sh/firebase@^12.7.0/"
   }
 }
@@ -71,7 +70,9 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW reg error:', err));
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.log('SW reg error:', err));
         });
       }
     </script>

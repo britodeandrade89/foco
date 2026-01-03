@@ -15,12 +15,17 @@ import {
   Edit2,
   Download,
   Share,
-  Monitor
+  Monitor,
+  Smartphone,
+  MessageSquare,
+  ShieldCheck,
+  Eraser
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Task, Category } from './types';
 import { TaskCard } from './components/TaskCard';
 import { getNaggingMessage } from './services/gemini';
+import { requestNotificationPermission } from './services/firebase';
 
 const INITIAL_CATEGORIES: Category[] = [
   { id: 'saude', name: 'SAÚDE', color: 'text-rose-500', iconName: 'Stethoscope' },
@@ -75,8 +80,12 @@ const App: React.FC = () => {
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [isLoadingCoach, setIsLoadingCoach] = useState(false);
 
+  // Estados de Notificações Push
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [showPushBanner, setShowPushBanner] = useState(false);
+
   // Estados de Instalação PWA
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -84,35 +93,61 @@ const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    // Detectar se já está instalado (standalone)
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    // Verificar se já temos permissão
+    if ('Notification' in window && Notification.permission === 'granted') {
+      setPushEnabled(true);
+    } else {
+      setShowPushBanner(true);
+    }
+
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
     setIsStandalone(isStandaloneMode);
 
-    // Detectar iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     setIsIOS(isIOSDevice);
 
-    // Capturar evento de instalação do Chrome/Android/Desktop
-    window.addEventListener('beforeinstallprompt', (e) => {
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
-      setInstallPrompt(e);
+      setDeferredPrompt(e);
       if (!isStandaloneMode) setShowInstallBanner(true);
-    });
+    };
 
-    // Se for iOS e não estiver instalado, mostra o banner após 2 segundos
-    if (isIOSDevice && !isStandaloneMode) {
-      setTimeout(() => setShowInstallBanner(true), 2000);
-    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const timer = setTimeout(() => {
+      if (!isStandaloneMode) setShowInstallBanner(true);
+    }, 2000);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearTimeout(timer);
+    };
   }, []);
 
-  const handleInstallClick = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowInstallBanner(false);
+  const handleEnablePush = async () => {
+    const success = await requestNotificationPermission();
+    if (success) {
+      setPushEnabled(true);
+      setShowPushBanner(false);
+      // Feedback imediato
+      new Notification("FOCO Ativado!", {
+        body: "André, agora eu posso te perseguir em qualquer lugar.",
+        icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
+      });
     }
-    setInstallPrompt(null);
+  };
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBanner(false);
+        setDeferredPrompt(null);
+      }
+    } else if (!isIOS) {
+      alert("Para instalar: Toque nos três pontos do navegador e selecione 'Instalar Aplicativo'.");
+    }
   };
 
   const playNagSound = useCallback((urgency = 0) => {
@@ -156,16 +191,26 @@ const App: React.FC = () => {
           const due = new Date(task.dueDate);
           const diff = due.getTime() - now.getTime();
           if (Math.abs(diff) < 30000 && !showNag) {
-            setNagMessage(`ANDRÉ! ACORDA! "${task.text}" é pra agora!`);
+            const msg = `ANDRÉ! ACORDA! "${task.text}" é pra agora!`;
+            setNagMessage(msg);
             setShowNag(true);
             playNagSound(1);
+            
+            // Notificação de Sistema se habilitado
+            if (pushEnabled) {
+              new Notification("PRAZO ESGOTADO", {
+                body: msg,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
+              });
+            }
+            
             setTimeout(() => setShowNag(false), 10000);
           }
         }
       });
     }, 30000);
     return () => clearInterval(timer);
-  }, [tasks, showNag, playNagSound]);
+  }, [tasks, showNag, playNagSound, pushEnabled]);
 
   useEffect(() => {
     const pendingCount = tasks.filter(t => !t.completed).length;
@@ -179,11 +224,20 @@ const App: React.FC = () => {
       setIsLoadingCoach(false);
       setShowNag(true);
       playNagSound();
+      
+      // Notificação push no intervalo do coach
+      if (pushEnabled && isAnnoyingMode) {
+        new Notification("COACH VIGILANTE", {
+          body: msg,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
+        });
+      }
+
       setTimeout(() => setShowNag(false), 6000);
     }, 120000);
 
     return () => clearInterval(nagTimer);
-  }, [tasks, isAnnoyingMode, playNagSound, showNag]);
+  }, [tasks, isAnnoyingMode, playNagSound, showNag, pushEnabled]);
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,6 +277,12 @@ const App: React.FC = () => {
     setNewCatIcon('Tag');
   };
 
+  const handleClearCompleted = () => {
+    if(confirm('Apagar todas as tarefas concluídas?')) {
+      setTasks(prev => prev.filter(t => !t.completed));
+    }
+  };
+
   const startEditingCategory = (cat: Category) => {
     setEditingCategoryId(cat.id);
     setNewCatName(cat.name);
@@ -242,43 +302,70 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen transition-all duration-300 pb-32">
-      {/* Banner de Instalação */}
+      {/* Banner de Push Notification */}
+      {showPushBanner && !pushEnabled && (
+        <div className="fixed top-4 inset-x-4 z-[110] animate-in slide-in-from-top duration-500">
+          <div className="bg-white border-2 border-indigo-500 rounded-[2rem] p-4 shadow-2xl flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <MessageSquare size={24} className="animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-xs font-black text-slate-900 uppercase">Alertas Ativos</h4>
+              <p className="text-[10px] text-slate-500">Receba alertas mesmo com o app fechado.</p>
+            </div>
+            <button 
+              onClick={handleEnablePush}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:bg-indigo-700 active:scale-95 transition-all"
+            >
+              ATIVAR
+            </button>
+            <button onClick={() => setShowPushBanner(false)} className="text-slate-300 p-1"><X size={18} /></button>
+          </div>
+        </div>
+      )}
+
+      {/* Banner de Instalação PWA */}
       {showInstallBanner && !isStandalone && (
-        <div className="fixed top-0 inset-x-0 z-[100] p-4 animate-bounce-in">
-          <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-2xl border-2 border-indigo-500/30 backdrop-blur-xl flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex gap-4 items-center">
-                <div className="bg-indigo-600 p-3 rounded-2xl shadow-inner">
-                  <Download size={24} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm uppercase tracking-wider">Instalar FOCO André</h3>
-                  <p className="text-xs text-slate-400 font-medium">Acesse mais rápido direto da sua tela inicial.</p>
-                </div>
-              </div>
+        <div className="fixed top-0 inset-x-0 z-[100] p-4 animate-in slide-in-from-top duration-500">
+          <div className="bg-slate-900 text-white rounded-[2rem] p-5 shadow-2xl border border-white/10 flex flex-col gap-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2">
               <button onClick={() => setShowInstallBanner(false)} className="p-2 text-slate-500 hover:text-white transition-colors">
                 <X size={20} />
               </button>
             </div>
             
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg border border-indigo-400">
+                <Download size={28} className="text-white animate-bounce" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm uppercase tracking-tight">FOCO André</h3>
+                <p className="text-xs text-slate-400">Instale agora para o seu coach te vigiar melhor.</p>
+              </div>
+            </div>
+            
             {isIOS ? (
-              <div className="bg-white/5 rounded-2xl p-4 flex flex-col gap-3">
-                <div className="flex items-center gap-3 text-xs font-bold text-indigo-400">
-                  <Share size={16} />
-                  <span>1. Toque no botão "Compartilhar" abaixo</span>
+              <div className="bg-white/5 rounded-2xl p-4 space-y-3 border border-white/5">
+                <div className="flex items-center gap-4 text-xs font-bold text-indigo-400">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-400/20 flex items-center justify-center text-indigo-400">
+                    <Share size={16} />
+                  </div>
+                  <span>1. Toque em "Compartilhar" no Safari</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs font-bold text-indigo-400">
-                  <Plus size={16} className="bg-indigo-400 text-slate-900 rounded p-0.5" />
-                  <span>2. Escolha "Adicionar à Tela de Início"</span>
+                <div className="flex items-center gap-4 text-xs font-bold text-indigo-400">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-400/20 flex items-center justify-center text-indigo-400">
+                    <Plus size={16} />
+                  </div>
+                  <span>2. Role e escolha "Adicionar à Tela de Início"</span>
                 </div>
               </div>
             ) : (
               <button 
                 onClick={handleInstallClick}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-sm shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-xs shadow-lg transition-all active:scale-[0.97] flex items-center justify-center gap-2 border-b-4 border-indigo-800"
               >
-                {installPrompt?.platforms?.includes('web') ? <Monitor size={18} /> : <Download size={18} />}
-                INSTALAR AGORA
+                <Smartphone size={18} />
+                INSTALAR NO MEU CELULAR
               </button>
             )}
           </div>
@@ -286,7 +373,7 @@ const App: React.FC = () => {
       )}
 
       {!audioEnabled && (
-        <div onClick={() => setAudioEnabled(true)} className="bg-rose-600 text-white p-2 text-center text-[10px] font-black tracking-widest uppercase cursor-pointer hover:bg-rose-700">
+        <div onClick={() => setAudioEnabled(true)} className="bg-rose-600 text-white p-2 text-center text-[10px] font-black tracking-widest uppercase cursor-pointer hover:bg-rose-700 shadow-lg">
           CLIQUE AQUI PARA ATIVAR OS ALERTAS DO COACH.
         </div>
       )}
@@ -294,10 +381,13 @@ const App: React.FC = () => {
       <div className="sticky top-0 z-40 bg-white shadow-sm pt-4 pb-2 px-4 md:px-8 border-b border-slate-100">
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-end mb-2">
-            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meta de André</h2>
+            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+              Meta de André
+              {pushEnabled && <ShieldCheck size={10} className="text-emerald-500" title="Alertas Ativos" />}
+            </h2>
             <span className="text-sm font-black text-indigo-600">{Math.round(progress)}%</span>
           </div>
-          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden relative">
+          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
             <div 
               className={`h-full transition-all duration-1000 ease-out ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-600'}`}
               style={{ width: `${progress}%` }}
@@ -321,6 +411,16 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex gap-2">
+            {!isStandalone && (
+              <button 
+                onClick={() => setShowInstallBanner(true)}
+                className="p-4 rounded-2xl bg-indigo-50 border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-100 transition-colors shadow-sm relative overflow-hidden group"
+                title="Instalar App"
+              >
+                <Download size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+              </button>
+            )}
             <button onClick={() => setIsAnnoyingMode(!isAnnoyingMode)} className={`p-4 rounded-2xl transition-all shadow-sm border-2 ${isAnnoyingMode ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white border-slate-200 text-slate-400'}`}>
               {isAnnoyingMode ? <BellRing size={20} className="animate-pulse" /> : <BellOff size={20} />}
             </button>
@@ -447,7 +547,16 @@ const App: React.FC = () => {
 
           {completed.length > 0 && (
             <section className="pt-8 border-t-2 border-slate-200/50">
-              <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest mb-4 px-2">Concluído</h3>
+              <div className="flex items-center justify-between mb-4 px-2">
+                <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest">Concluído</h3>
+                <button 
+                  onClick={handleClearCompleted}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-500 bg-rose-50 hover:bg-rose-100 transition-colors shadow-sm"
+                >
+                  <Eraser size={12} />
+                  Limpar Tudo
+                </button>
+              </div>
               <div className="space-y-2">
                 {completed.map(task => (
                   <TaskCard 
@@ -535,7 +644,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 items-center">
         <button 
           onClick={async () => {
             setIsLoadingCoach(true);
@@ -544,9 +653,18 @@ const App: React.FC = () => {
             setIsLoadingCoach(false);
             setShowNag(true);
             playNagSound();
+            
+            // Teste de notificação forçado no botão do coach
+            if (pushEnabled) {
+              new Notification("COACH ON-DEMAND", {
+                body: msg,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
+              });
+            }
+            
             setTimeout(() => setShowNag(false), 5000);
           }}
-          className="w-20 h-20 bg-white border-4 border-slate-900 text-slate-900 rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all"
+          className="w-20 h-20 bg-white border-4 border-slate-900 text-slate-900 rounded-[2rem] flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all shadow-indigo-200"
         >
           <BrainCircuit size={32} />
         </button>

@@ -46,18 +46,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, category, onToggle, on
       onClick={() => onToggle(task.id)}
     >
       <div className="flex items-center gap-4">
-        {/* Liga/Desliga Toggle Switch */}
+        {/* Toggle Switch */}
         <div className="flex-shrink-0">
           <div 
             className={`
-              w-12 h-6 rounded-full p-1 transition-colors duration-300 ease-in-out
+              w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ease-in-out
               ${task.completed ? 'bg-emerald-500' : 'bg-slate-200'}
             `}
           >
             <div 
               className={`
                 w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out
-                ${task.completed ? 'translate-x-6' : 'translate-x-0'}
+                ${task.completed ? 'translate-x-5' : 'translate-x-0'}
               `}
             />
           </div>
@@ -99,11 +99,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, category, onToggle, on
           )}
         </div>
 
+        {/* Lixeirinha do lado (Botão de Excluir) */}
         <button 
-          onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
-          className={`p-2 rounded-full transition-colors ${task.completed ? 'text-emerald-300 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            if(confirm('Apagar esta tarefa?')) onDelete(task.id); 
+          }}
+          className={`
+            p-2.5 rounded-xl transition-all duration-200
+            ${task.completed 
+              ? 'text-emerald-300 hover:text-rose-500 hover:bg-rose-50' 
+              : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50 shadow-sm border border-transparent hover:border-rose-100'
+            }
+          `}
+          title="Excluir tarefa"
         >
-          <Trash2 size={16} />
+          <Trash2 size={18} />
         </button>
       </div>
     </div>

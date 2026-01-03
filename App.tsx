@@ -25,7 +25,7 @@ import * as Icons from 'lucide-react';
 import { Task, Category } from './types';
 import { TaskCard } from './components/TaskCard';
 import { getNaggingMessage } from './services/gemini';
-import { requestNotificationPermission, initFirebaseMessaging, initAnalytics } from './services/firebase';
+import { requestNotificationPermission } from './services/firebase';
 
 const INITIAL_CATEGORIES: Category[] = [
   { id: 'saude', name: 'SAÚDE', color: 'text-rose-500', iconName: 'Stethoscope' },
@@ -93,15 +93,12 @@ const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    // Initialize Firebase Services safely
-    initAnalytics();
-    initFirebaseMessaging().then((messaging) => {
-      if (messaging && 'Notification' in window && Notification.permission === 'granted') {
-        setPushEnabled(true);
-      } else {
-        setShowPushBanner(true);
-      }
-    });
+    // Verificar se já temos permissão
+    if ('Notification' in window && Notification.permission === 'granted') {
+      setPushEnabled(true);
+    } else {
+      setShowPushBanner(true);
+    }
 
     const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
     setIsStandalone(isStandaloneMode);

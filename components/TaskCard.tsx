@@ -39,82 +39,64 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, category, onToggle, on
     <div 
       className={`
         relative overflow-hidden group transition-all duration-300 transform
-        ${task.completed ? 'bg-emerald-50/50 border-emerald-200 shadow-sm translate-y-0.5' : 'bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 border-slate-200'}
-        ${isOverdue ? 'border-l-4 border-l-rose-500' : 'border'}
-        rounded-2xl p-4 cursor-pointer
+        ${task.completed ? 'bg-white/10 border-white/5 opacity-50 scale-[0.98]' : 'bg-white border-transparent shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:-translate-y-1'}
+        rounded-[2.2rem] p-5 cursor-pointer border
       `}
       onClick={() => onToggle(task.id)}
     >
-      <div className="flex items-center gap-4">
-        {/* Toggle Switch */}
+      <div className="flex items-center gap-5">
+        {/* Toggle Custom Switch */}
         <div className="flex-shrink-0">
           <div 
             className={`
-              w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ease-in-out
+              w-12 h-6 rounded-full p-1 transition-all duration-300
               ${task.completed ? 'bg-emerald-500' : 'bg-slate-200'}
             `}
           >
             <div 
               className={`
-                w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out
-                ${task.completed ? 'translate-x-5' : 'translate-x-0'}
+                w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300
+                ${task.completed ? 'translate-x-6' : 'translate-x-0'}
               `}
             />
           </div>
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-2 mb-1">
             {category && (
-              <span className={`flex-shrink-0 ${task.completed ? 'text-emerald-600' : category.color}`}>
-                <DynamicIcon name={category.iconName} size={14} />
+              <span className={`flex-shrink-0 ${task.completed ? 'text-emerald-400' : category.color}`}>
+                <DynamicIcon name={category.iconName} size={16} />
               </span>
             )}
-            <p className={`text-sm font-bold truncate transition-all ${task.completed ? 'text-emerald-800' : 'text-slate-800'}`}>
+            <p className={`text-base font-black truncate transition-all ${task.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
               {task.text}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {task.dueDate && (
-              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${isOverdue ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-slate-100 text-slate-500'}`}>
-                {isOverdue ? <AlertCircle size={8} /> : <Clock size={8} />}
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-xl text-[10px] font-black uppercase ${isOverdue ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'}`}>
+                {isOverdue ? <AlertCircle size={10} /> : <Clock size={10} />}
                 {formatTime(task.dueDate)}
               </div>
             )}
             {category && !task.completed && (
-              <div className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-500 uppercase tracking-tighter">
+              <div className="px-2 py-1 rounded-xl text-[9px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
                 {category.name}
               </div>
             )}
           </div>
-          
-          {!task.completed && task.note && (
-            <div className="mt-2 flex items-start gap-2 bg-indigo-50/50 p-2 rounded-xl border border-indigo-100/30">
-              <Info size={12} className="text-indigo-400 mt-0.5 flex-shrink-0" />
-              <p className="text-[10px] text-indigo-600 italic leading-snug">
-                {task.note}
-              </p>
-            </div>
-          )}
         </div>
 
-        {/* Lixeirinha do lado (Botão de Excluir) */}
         <button 
           onClick={(e) => { 
             e.stopPropagation(); 
             if(confirm('Apagar esta tarefa?')) onDelete(task.id); 
           }}
-          className={`
-            p-2.5 rounded-xl transition-all duration-200
-            ${task.completed 
-              ? 'text-emerald-300 hover:text-rose-500 hover:bg-rose-50' 
-              : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50 shadow-sm border border-transparent hover:border-rose-100'
-            }
-          `}
-          title="Excluir tarefa"
+          className="p-3 rounded-2xl text-slate-200 hover:text-rose-500 hover:bg-rose-50 transition-all"
         >
-          <Trash2 size={18} />
+          <Trash2 size={20} />
         </button>
       </div>
     </div>

@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-      /* Força a mesma fonte em tudo e oculta a barra de rolagem lateral */
+      /* Force consistent font and hide scrollbars */
       * {
         font-family: 'Inter', sans-serif !important;
         -webkit-tap-highlight-color: transparent;
@@ -30,8 +30,9 @@
       }
       
       body {
-        background-color: #f8fafc;
+        background-color: #050a18; /* Dark Navy Background */
         overscroll-behavior-y: contain;
+        color: #ffffff;
       }
 
       .shake {
@@ -48,6 +49,12 @@
       html {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+      }
+
+      .gold-gradient-text {
+        background: linear-gradient(to right, #fde047, #eab308);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
     </style>
   <script type="importmap">

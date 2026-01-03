@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'foco-andre-v3';
+const CACHE_NAME = 'foco-andre-v4';
 const ASSETS = [
   '/',
   '/index.html',
@@ -27,6 +27,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Evita cachear chamadas da API
+  if (event.request.url.includes('googleapis.com')) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request).then((response) => response || fetch(event.request))
   );
@@ -52,11 +57,7 @@ self.addEventListener('push', (event) => {
     data: {
       dateOfArrival: Date.now(),
       primaryKey: '1'
-    },
-    actions: [
-      { action: 'explore', title: 'Abrir App' },
-      { action: 'close', title: 'Fechar' },
-    ]
+    }
   };
 
   event.waitUntil(
@@ -67,6 +68,16 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({type: 'window'}).then(windowClients => {
+      for (let i = 0; i < windowClients.length; i++) {
+        let client = windowClients[i];
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
   );
 });

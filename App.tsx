@@ -25,7 +25,7 @@ import * as Icons from 'lucide-react';
 import { Task, Category } from './types';
 import { TaskCard } from './components/TaskCard';
 import { getNaggingMessage } from './services/gemini';
-import { requestNotificationPermission } from './services/firebase';
+import { requestNotificationPermission, initFirebaseMessaging, initAnalytics } from './services/firebase';
 
 const INITIAL_CATEGORIES: Category[] = [
   { id: 'saude', name: 'SAÚDE', color: 'text-rose-500', iconName: 'Stethoscope' },
@@ -93,12 +93,15 @@ const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    // Verificar se já temos permissão
-    if ('Notification' in window && Notification.permission === 'granted') {
-      setPushEnabled(true);
-    } else {
-      setShowPushBanner(true);
-    }
+    // Initialize Firebase Services safely
+    initAnalytics();
+    initFirebaseMessaging().then((messaging) => {
+      if (messaging && 'Notification' in window && Notification.permission === 'granted') {
+        setPushEnabled(true);
+      } else {
+        setShowPushBanner(true);
+      }
+    });
 
     const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
     setIsStandalone(isStandaloneMode);
@@ -130,10 +133,12 @@ const App: React.FC = () => {
       setPushEnabled(true);
       setShowPushBanner(false);
       // Feedback imediato
-      new Notification("FOCO Ativado!", {
-        body: "André, agora eu posso te perseguir em qualquer lugar.",
-        icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
-      });
+      if ('Notification' in window) {
+        new Notification("FOCO Ativado!", {
+          body: "André, agora eu posso te perseguir em qualquer lugar.",
+          icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
+        });
+      }
     }
   };
 
@@ -197,7 +202,7 @@ const App: React.FC = () => {
             playNagSound(1);
             
             // Notificação de Sistema se habilitado
-            if (pushEnabled) {
+            if (pushEnabled && 'Notification' in window) {
               new Notification("PRAZO ESGOTADO", {
                 body: msg,
                 icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
@@ -226,7 +231,7 @@ const App: React.FC = () => {
       playNagSound();
       
       // Notificação push no intervalo do coach
-      if (pushEnabled && isAnnoyingMode) {
+      if (pushEnabled && isAnnoyingMode && 'Notification' in window) {
         new Notification("COACH VIGILANTE", {
           body: msg,
           icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
@@ -655,7 +660,7 @@ const App: React.FC = () => {
             playNagSound();
             
             // Teste de notificação forçado no botão do coach
-            if (pushEnabled) {
+            if (pushEnabled && 'Notification' in window) {
               new Notification("COACH ON-DEMAND", {
                 body: msg,
                 icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'

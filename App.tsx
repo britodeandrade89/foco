@@ -155,9 +155,16 @@ const App: React.FC = () => {
 
       <div className="px-4 py-6">
         <div className="bg-white rounded-[2.5rem] p-6 shadow-2xl">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[11px] font-black text-amber-600 uppercase tracking-widest">Domínio André</h2>
-            <span className="text-2xl font-black text-[#050a18]">{stats.percent}%</span>
+          <div className="flex justify-between items-end mb-4">
+            <div>
+              <h2 className="text-[11px] font-black text-amber-600 uppercase tracking-widest">Domínio André</h2>
+              <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                {stats.completed} de {stats.total} tarefas cumpridas
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-black text-[#050a18] block leading-none">{stats.percent}%</span>
+            </div>
           </div>
           <div className="w-full h-4 bg-amber-50 rounded-full overflow-hidden border border-amber-100/50">
             <div className="h-full bg-amber-500 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(245,158,11,0.5)]" style={{ width: `${stats.percent}%` }} />

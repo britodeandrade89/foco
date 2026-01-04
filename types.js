@@ -1,0 +1,2 @@
+// JavaScript types stub
+export {};

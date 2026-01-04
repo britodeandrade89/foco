@@ -64,7 +64,6 @@
     "firebase/analytics": "https://esm.sh/firebase@11.2.0/analytics",
     "firebase/messaging": "https://esm.sh/firebase@11.2.0/messaging",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
     "firebase/": "https://esm.sh/firebase@^12.7.0/"
   }
 }
@@ -72,13 +71,14 @@
   </head>
   <body class="overflow-x-hidden">
     <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
+    <script type="module" src="index.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('✅ Service Worker Ativo:', reg.scope))
-            .catch(err => console.warn('❌ Erro no SW:', err.message));
+          // Use caminho absoluto conforme solicitado
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('✅ Service Worker Registrado:', reg.scope))
+            .catch(err => console.log('❌ SW Error:', err));
         });
       }
     </script>

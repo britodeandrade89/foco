@@ -20,8 +20,6 @@ let messagingInstance: any = null;
 
 export const getSafeAnalytics = async () => {
   if (typeof window === 'undefined') return null;
-  if (analyticsInstance) return analyticsInstance;
-  
   try {
     const supported = await isAnalyticsSupported();
     if (supported) {
@@ -29,20 +27,17 @@ export const getSafeAnalytics = async () => {
       return analyticsInstance;
     }
   } catch (err) {
-    console.warn("Analytics failed to init:", err);
+    console.warn("Analytics not supported:", err);
   }
   return null;
 };
 
 export const getSafeMessaging = async () => {
   if (typeof window === 'undefined') return null;
-  if (messagingInstance) return messagingInstance;
-  
   try {
     const supported = await isMessagingSupported();
     if (supported) {
       messagingInstance = getMessaging(app);
-      
       onMessage(messagingInstance, (payload) => {
         if (Notification.permission === 'granted') {
           new Notification(payload.notification?.title || 'FOCO', {
@@ -51,7 +46,6 @@ export const getSafeMessaging = async () => {
           });
         }
       });
-      
       return messagingInstance;
     }
   } catch (err) {
@@ -61,16 +55,22 @@ export const getSafeMessaging = async () => {
 };
 
 export const requestNotificationPermission = async () => {
-  if (typeof window === 'undefined' || !('Notification' in window)) return false;
+  if (!('Notification' in window)) return false;
   
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       const messaging = await getSafeMessaging();
       if (messaging) {
-        await getToken(messaging, {
-          vapidKey: 'BLe-R-p-Lh-8mK3_yQ-uP-B6_tY-Y-Y-Y-Y-Y-Y-Y'
-        });
+        // VAPID Key: Substitua pela chave real do seu console Firebase Cloud Messaging se necessário.
+        try {
+          const token = await getToken(messaging, {
+            vapidKey: 'BCS_8X5Y3X_jW_X_X_X_X_X_X_X_X_X_X_X_X_X' 
+          });
+          console.log('Push Token gerado:', token);
+        } catch (tokenErr) {
+          console.warn('Erro ao obter token Push (possível VAPID inválida):', tokenErr);
+        }
       }
     }
     return permission === 'granted';

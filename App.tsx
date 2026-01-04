@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Plus, 
   BellRing, 
@@ -18,7 +17,8 @@ import {
   Camera,
   Book,
   Settings,
-  Tag
+  Tag,
+  Info
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Task, Category } from './types';
@@ -29,7 +29,7 @@ import { requestNotificationPermission, getSafeAnalytics } from './services/fire
 const INITIAL_CATEGORIES: Category[] = [
   { id: 'saude', name: 'SAÚDE', color: 'text-rose-500', iconName: 'Stethoscope' },
   { id: 'viagem', name: 'VIAGEM', color: 'text-sky-500', iconName: 'Plane' },
-  { id: 'casa', name: 'CARRO & CASA', color: 'text-amber-600', iconName: 'Car' },
+  { id: 'casa', name: 'CASA/CARRO', color: 'text-amber-600', iconName: 'Car' },
   { id: 'pessoal', name: 'PESSOAL', color: 'text-purple-500', iconName: 'Camera' },
   { id: 'estudo', name: 'ESTUDO', color: 'text-emerald-500', iconName: 'Book' },
   { id: 'projetos', name: 'PROJETOS', color: 'text-indigo-500', iconName: 'Settings' },
@@ -37,30 +37,18 @@ const INITIAL_CATEGORIES: Category[] = [
 ];
 
 const INITIAL_TASKS: Task[] = [
-  // SAÚDE
   { id: 1, text: "Modificar a receita médica", categoryId: "saude", completed: false, createdAt: Date.now() },
   { id: 2, text: "Criar receita para mounjauro", categoryId: "saude", completed: false, createdAt: Date.now() },
   { id: 3, text: "Criar receita para deposteron", categoryId: "saude", completed: false, createdAt: Date.now() },
-  { id: 9, text: "Procurar pedidos médicos de exame de sangue", categoryId: "saude", completed: false, note: "Dica: Verifique o e-mail de dez/2023 (Labormed Maricá).", createdAt: Date.now() },
+  { id: 9, text: "Procurar pedidos médicos de exame de sangue", categoryId: "saude", completed: false, note: "Dica: Verifique o e-mail de dez/2023.", createdAt: Date.now() },
   { id: 18, text: "Procurar certificados de vacina (Anvisa)", categoryId: "saude", completed: false, createdAt: Date.now() },
   { id: 19, text: "Traduzir docs TEA e Bariátrica p/ inglês", categoryId: "saude", completed: false, createdAt: Date.now() },
-  // VIAGEM
   { id: 4, text: "Criar roteiro para a viagem", categoryId: "viagem", completed: false, createdAt: Date.now() },
   { id: 5, text: "Pesquisar estadias para a viagem", categoryId: "viagem", completed: false, createdAt: Date.now() },
   { id: 6, text: "Voo: Johanesburgo p/ Cidade do Cabo", categoryId: "viagem", completed: false, createdAt: Date.now() },
-  { id: 7, text: "Passagem: RJ p/ São Paulo", categoryId: "viagem", completed: false, createdAt: Date.now() },
-  { id: 8, text: "Passagem: São Paulo p/ Leme", categoryId: "viagem", completed: false, createdAt: Date.now() },
-  { id: 15, text: "Colocar todos os dados da viagem no app", categoryId: "viagem", completed: false, createdAt: Date.now() },
-  { id: 16, text: "Colocar as passagens no app", categoryId: "viagem", completed: false, createdAt: Date.now() },
-  { id: 17, text: "Procurar seguro de viagem", categoryId: "viagem", completed: false, createdAt: Date.now() },
-  // CASA / CARRO
   { id: 11, text: "Levar o carro no Davi (Santa Cruz)", categoryId: "casa", completed: false, createdAt: Date.now() },
   { id: 13, text: "Limpar o carro", categoryId: "casa", completed: false, createdAt: Date.now() },
-  { id: 14, text: "Limpar a casa", categoryId: "casa", completed: false, createdAt: Date.now() },
-  // OUTROS
-  { id: 12, text: "Fazer a edição na foto da minha mãe", categoryId: "pessoal", completed: false, createdAt: Date.now() },
   { id: 20, text: "Estudar um pouco de inglês", categoryId: "estudo", completed: false, createdAt: Date.now() },
-  { id: 21, text: "Melhorar app translate de viagem", categoryId: "projetos", completed: false, createdAt: Date.now() },
 ];
 
 const App: React.FC = () => {
@@ -72,36 +60,71 @@ const App: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState('geral');
   const [dueDate, setDueDate] = useState('');
   const [isAnnoyingMode, setIsAnnoyingMode] = useState(true);
-  const [nagMessage, setNagMessage] = useState<string>("André, procrastinar é para amadores.");
+  const [nagMessage, setNagMessage] = useState<string>("André, vambora. O tempo está passando.");
   const [showNag, setShowNag] = useState(false);
+  const [isLoadingCoach, setIsLoadingCoach] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
-  // Initialize Firebase services on mount
+  const audioContextRef = useRef<AudioContext | null>(null);
+
   useEffect(() => {
-    const initServices = async () => {
+    const init = async () => {
       await requestNotificationPermission();
       await getSafeAnalytics();
     };
-    initServices();
+    init();
   }, []);
 
-  // Use effect to fetch the aggressive coach nagging message
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    const fetchNag = async () => {
-      if (isAnnoyingMode) {
-        const pending = tasks.filter(t => !t.completed);
-        const msg = await getNaggingMessage(pending);
-        setNagMessage(msg);
-        setShowNag(true);
+  const playNagSound = useCallback(() => {
+    if (!isAnnoyingMode || !audioEnabled) return;
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-    };
-    
-    fetchNag();
-    interval = setInterval(fetchNag, 60000); // Check every minute
-    return () => clearInterval(interval);
-  }, [isAnnoyingMode, tasks]);
+      if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
+      const osc = audioContextRef.current.createOscillator();
+      const gain = audioContextRef.current.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, audioContextRef.current.currentTime);
+      gain.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+      gain.gain.linearRampToValueAtTime(0.05, audioContextRef.current.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(audioContextRef.current.destination);
+      osc.start();
+      osc.stop(audioContextRef.current.currentTime + 0.3);
+    } catch (e) {}
+  }, [isAnnoyingMode, audioEnabled]);
 
-  const addTask = () => {
+  const triggerCoach = async () => {
+    setIsLoadingCoach(true);
+    const pending = tasks.filter(t => !t.completed);
+    const msg = await getNaggingMessage(pending);
+    setNagMessage(msg);
+    setIsLoadingCoach(false);
+    setShowNag(true);
+    playNagSound();
+    setTimeout(() => setShowNag(false), 6000);
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isAnnoyingMode && tasks.some(t => !t.completed)) {
+        triggerCoach();
+      }
+    }, 60000); // Nag every minute
+    return () => clearInterval(interval);
+  }, [isAnnoyingMode, tasks, playNagSound]);
+
+  const stats = useMemo(() => {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.completed).length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { percent, total, completed };
+  }, [tasks]);
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputValue.trim()) return;
     const newTask: Task = {
       id: Date.now(),
@@ -111,206 +134,140 @@ const App: React.FC = () => {
       createdAt: Date.now(),
       dueDate: dueDate || undefined
     };
-    setTasks(prev => [...prev, newTask]);
+    setTasks(prev => [newTask, ...prev]);
     setInputValue('');
     setDueDate('');
     setIsFormExpanded(false);
   };
 
-  const toggleTask = (id: number) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const deleteTask = (id: number) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
-  };
-
   const filteredTasks = useMemo(() => {
-    let result = tasks;
-    if (filterCategoryId) {
-      result = result.filter(t => t.categoryId === filterCategoryId);
-    }
-    return [...result].sort((a, b) => Number(a.completed) - Number(b.completed) || b.createdAt - a.createdAt);
+    let list = filterCategoryId ? tasks.filter(t => t.categoryId === filterCategoryId) : tasks;
+    return [...list].sort((a, b) => Number(a.completed) - Number(b.completed) || b.createdAt - a.createdAt);
   }, [tasks, filterCategoryId]);
 
-  const stats = useMemo(() => {
-    const total = tasks.length;
-    const completed = tasks.filter(t => t.completed).length;
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-    return { total, completed, percent };
-  }, [tasks]);
-
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans p-4 pb-24 lg:p-12">
-      <header className="max-w-4xl mx-auto mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 text-indigo-600 font-black tracking-tighter mb-1">
-            <BrainCircuit size={20} />
-            <span className="text-sm">FOCO.AI // AGGRESSIVE COACH</span>
-          </div>
-          <h1 className="text-6xl font-black text-[#050a18] tracking-tight">
-            André, <span className="text-indigo-600">vambora.</span>
-          </h1>
+    <div className="min-h-screen bg-[#050a18] text-white transition-all pb-32">
+      {!audioEnabled && (
+        <div onClick={() => setAudioEnabled(true)} className="bg-white/5 p-3 text-center text-[9px] font-black uppercase tracking-widest cursor-pointer hover:bg-white/10 transition-colors border-b border-white/5 flex items-center justify-center gap-2">
+          <Info size={12} /> CLIQUE PARA ATIVAR O PROTOCOLO SONORO DO COACH.
         </div>
-        
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setIsAnnoyingMode(!isAnnoyingMode)}
-            className={`p-4 rounded-3xl transition-all ${isAnnoyingMode ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-200 text-slate-500'}`}
-          >
-            {isAnnoyingMode ? <BellRing size={24} /> : <BellOff size={24} />}
-          </button>
-          <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progresso</p>
-              <p className="text-2xl font-black text-[#050a18]">{stats.percent}%</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      )}
 
-      {showNag && isAnnoyingMode && (
-        <div className="max-w-4xl mx-auto mb-12 animate-in slide-in-from-top duration-500">
-          <div className="bg-[#050a18] text-white p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
-            <div className="flex items-start gap-6 relative z-10">
-              <div className="w-14 h-14 bg-indigo-500 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/40">
-                <BrainCircuit size={28} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-indigo-400 text-xs font-black uppercase tracking-[0.2em] mb-2">Seu Coach Agressivo diz:</p>
-                <h2 className="text-2xl md:text-3xl font-bold leading-tight italic">"{nagMessage}"</h2>
-              </div>
-              <button onClick={() => setShowNag(false)} className="text-slate-500 hover:text-white">
-                <X size={24} />
-              </button>
+      <div className="px-4 py-6">
+        <div className="bg-white rounded-[2.5rem] p-6 shadow-2xl">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[11px] font-black text-amber-600 uppercase tracking-widest">Domínio André</h2>
+            <span className="text-2xl font-black text-[#050a18]">{stats.percent}%</span>
+          </div>
+          <div className="w-full h-4 bg-amber-50 rounded-full overflow-hidden border border-amber-100/50">
+            <div className="h-full bg-amber-500 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(245,158,11,0.5)]" style={{ width: `${stats.percent}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-2xl mx-auto px-4">
+        <header className="flex justify-between items-start mb-10 mt-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="text-amber-500" size={16} />
+              <span className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em]">ALTA PERFORMANCE</span>
             </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">FOCO<span className="text-amber-500">.</span></h1>
+            <p className="text-slate-400 text-sm font-medium mt-3">André, procrastinar é para amadores.</p>
+          </div>
+          <button 
+            onClick={() => { setIsAnnoyingMode(!isAnnoyingMode); if(!audioEnabled) setAudioEnabled(true); }} 
+            className={`w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl transition-all ${isAnnoyingMode ? 'bg-[#3b49df] text-white' : 'bg-white text-slate-300'}`}
+          >
+            {isAnnoyingMode ? <BellRing size={22} className="animate-pulse" /> : <BellOff size={22} />}
+          </button>
+        </header>
+
+        {/* Categories Grid */}
+        <div className="grid grid-cols-4 gap-2 mb-10">
+          <button onClick={() => setFilterCategoryId(null)} className={`flex flex-col items-center justify-center p-3 rounded-[1.5rem] transition-all h-20 border-2 ${!filterCategoryId ? 'bg-[#3b49df] border-transparent shadow-lg shadow-blue-900/40 scale-105' : 'bg-white text-slate-900 border-transparent hover:scale-102'}`}>
+            <LayoutGrid size={22} className="mb-1" />
+            <span className="text-[9px] font-black tracking-widest uppercase">TUDO</span>
+          </button>
+          {categories.slice(0, 3).map(cat => (
+            <button key={cat.id} onClick={() => setFilterCategoryId(cat.id)} className={`flex flex-col items-center justify-center p-3 rounded-[1.5rem] transition-all h-20 border-2 ${filterCategoryId === cat.id ? 'bg-[#3b49df] border-transparent shadow-lg shadow-blue-900/40 scale-105' : 'bg-white text-slate-900 border-transparent hover:scale-102'}`}>
+              <span className={`${filterCategoryId === cat.id ? 'text-white' : cat.color} mb-1`}>
+                {React.createElement((Icons as any)[cat.iconName] || Tag, { size: 22 })}
+              </span>
+              <span className="text-[9px] font-black tracking-widest uppercase truncate w-full text-center">{cat.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Add Task UI */}
+        <div className="mb-10">
+          <div className={`bg-white rounded-[2.5rem] transition-all shadow-2xl ${isFormExpanded ? 'p-6' : 'p-2 flex items-center h-20'}`}>
+            {!isFormExpanded ? (
+              <>
+                <div onClick={() => setIsFormExpanded(true)} className="flex-1 px-6 cursor-text"><p className="text-slate-400 font-medium">Lembrou de algo, André?</p></div>
+                <button onClick={() => setIsFormExpanded(true)} className="w-16 h-16 bg-[#050a18] text-white rounded-[1.8rem] flex items-center justify-center shadow-lg active:scale-95 transition-all"><Plus size={32}/></button>
+              </>
+            ) : (
+              <form onSubmit={handleAddTask} className="space-y-4">
+                <div className="flex justify-between items-center"><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Novo Protocolo</span><X onClick={() => setIsFormExpanded(false)} className="text-slate-400 cursor-pointer p-1 hover:text-rose-500 transition-colors"/></div>
+                <input autoFocus type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} className="w-full text-xl font-bold text-[#050a18] outline-none placeholder:text-slate-200" placeholder="O que faremos agora?" />
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={selectedCategoryId} onChange={e => setSelectedCategoryId(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-slate-900 font-bold text-xs outline-none border-none">
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-slate-900 font-bold text-xs outline-none border-none" />
+                </div>
+                <button type="submit" className="w-full bg-[#3b49df] text-white py-5 rounded-[2rem] font-black text-sm shadow-[0_10px_30px_rgba(59,73,223,0.4)] active:scale-[0.98] transition-all">EXECUTAR AGORA</button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {/* Task List */}
+        <div className="space-y-4">
+          {filteredTasks.map(task => (
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              category={categories.find(c => c.id === task.categoryId)} 
+              onToggle={id => setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t))} 
+              onDelete={id => setTasks(prev => prev.filter(t => t.id !== id))} 
+            />
+          ))}
+          {filteredTasks.length === 0 && (
+            <div className="text-center py-10 opacity-30">
+              <CheckCircle2 size={48} className="mx-auto mb-4" />
+              <p className="font-black text-sm uppercase tracking-widest">Sem pendências. André, você é uma máquina.</p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Coach Trigger Button */}
+      <div className="fixed bottom-10 right-8 z-50">
+        <button 
+          onClick={triggerCoach}
+          className="w-20 h-20 bg-white text-slate-900 rounded-[2.2rem] flex items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.8)] border-4 border-[#050a18] hover:scale-110 active:scale-90 transition-all group overflow-hidden"
+        >
+          <BrainCircuit size={32} className={`relative z-10 ${isLoadingCoach ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Nagging Overlay */}
+      {showNag && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#050a18]/90 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-rose-600 p-10 rounded-[3.5rem] text-center shadow-[0_0_80px_rgba(225,29,72,0.6)] border-4 border-rose-400 shake max-w-sm relative">
+            <button onClick={() => setShowNag(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors"><X size={24}/></button>
+            <BrainCircuit size={48} className="mx-auto mb-6 text-white animate-bounce" />
+            <h2 className="text-2xl font-black italic text-white leading-tight">"{nagMessage}"</h2>
           </div>
         </div>
       )}
 
-      <main className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
-        <aside className="lg:col-span-3">
-          <div className="sticky top-8 space-y-8">
-            <div>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                <LayoutGrid size={12} /> Categorias
-              </h3>
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={() => setFilterCategoryId(null)}
-                  className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-bold transition-all ${!filterCategoryId ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-100'}`}
-                >
-                  <ListTodo size={18} /> Todas
-                </button>
-                {categories.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setFilterCategoryId(cat.id)}
-                    className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-bold transition-all ${filterCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-100'}`}
-                  >
-                    <span className={filterCategoryId === cat.id ? 'text-white' : cat.color}>
-                      {React.createElement((Icons as any)[cat.iconName] || Tag, { size: 18 })}
-                    </span>
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="lg:col-span-9 space-y-6">
-          <div className={`bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden transition-all duration-500 ${isFormExpanded ? 'ring-2 ring-indigo-500' : ''}`}>
-            {!isFormExpanded ? (
-              <button 
-                onClick={() => setIsFormExpanded(true)}
-                className="w-full flex items-center gap-4 p-8 text-slate-400 hover:text-indigo-600 transition-colors group"
-              >
-                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:bg-indigo-50 text-slate-400 group-hover:text-indigo-600 transition-all">
-                  <Plus size={24} />
-                </div>
-                <span className="text-xl font-bold tracking-tight">O que você está adiando agora, André?</span>
-              </button>
-            ) : (
-              <div className="p-8 space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                <input 
-                  autoFocus
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTask()}
-                  placeholder="Nome da tarefa..."
-                  className="w-full text-3xl font-black placeholder:text-slate-100 outline-none text-[#050a18]"
-                />
-                
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex-1 min-w-[200px]">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Categoria</p>
-                    <div className="flex flex-wrap gap-2">
-                      {categories.map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedCategoryId(cat.id)}
-                          className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase transition-all ${selectedCategoryId === cat.id ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-                        >
-                          {cat.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="shrink-0">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Vencimento</p>
-                    <input 
-                      type="datetime-local" 
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      className="bg-slate-50 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 outline-none border-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-50">
-                  <button onClick={() => setIsFormExpanded(false)} className="px-6 py-3 text-slate-400 font-bold text-sm">Cancelar</button>
-                  <button 
-                    onClick={addTask}
-                    className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all"
-                  >
-                    CRIAR TAREFA
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {filteredTasks.map(task => (
-              <TaskCard 
-                key={task.id} 
-                task={task} 
-                category={categories.find(c => c.id === task.categoryId)}
-                onToggle={toggleTask}
-                onDelete={deleteTask}
-              />
-            ))}
-            {filteredTasks.length === 0 && (
-              <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                <CheckCircle2 size={48} className="text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-400 font-bold">Nenhuma tarefa por aqui. Aproveite a folga (enquanto dura).</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#050a18]/90 backdrop-blur-xl text-white px-8 py-4 rounded-full shadow-2xl border border-white/10 z-50">
-        <Smartphone size={20} className="text-indigo-400" />
-        <span className="text-sm font-bold tracking-tight">Instale o FOCO.AI</span>
-        <div className="w-px h-4 bg-white/10 mx-2" />
-        <Download size={20} className="text-indigo-400" />
+      {/* PWA Footer Prompt */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#050a18]/90 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl border border-white/10 z-50">
+        <Smartphone size={16} className="text-indigo-400" />
+        <span className="text-[10px] font-black tracking-widest uppercase">Protocolo André Nativo</span>
       </div>
     </div>
   );

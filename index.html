@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>FOCO - André's Task Master</title>
+    <title>FOCO - André Elite</title>
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,31 +22,14 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-
-      *::-webkit-scrollbar {
-        display: none;
-      }
-      
-      body {
-        background-color: #050a18;
-        overscroll-behavior-y: contain;
-        color: #ffffff;
-      }
-
-      .shake {
-        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-      }
-
+      *::-webkit-scrollbar { display: none; }
+      body { background-color: #050a18; overscroll-behavior-y: contain; color: #ffffff; }
+      .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
       @keyframes shake {
         10%, 90% { transform: translate3d(-1px, 0, 0); }
         20%, 80% { transform: translate3d(2px, 0, 0); }
         30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
         40%, 60% { transform: translate3d(4px, 0, 0); }
-      }
-
-      html {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
     </style>
     <script type="importmap">
@@ -69,13 +52,21 @@
   </head>
   <body class="overflow-x-hidden">
     <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Standard relative registration avoids origin mismatch in sandboxed usercontent environments.
-          navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('✅ SW Registrado:', reg.scope))
-            .catch(err => console.error('❌ Erro SW:', err));
+          // Using a relative URL resolved against the current origin to avoid sandbox mismatch errors
+          try {
+            const swUrl = new URL('sw.js', window.location.href).href;
+            navigator.serviceWorker.register(swUrl)
+              .then(reg => console.log('✅ Service Worker Ativo:', reg.scope))
+              .catch(err => {
+                console.warn('❌ Erro no SW (Pode ser bloqueado no ambiente de preview):', err.message);
+              });
+          } catch (e) {
+            console.warn('Falha ao construir URL do Service Worker');
+          }
         });
       }
     </script>

@@ -73,22 +73,20 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Attempting to register using a clean relative path to avoid origin errors in sandboxed environments.
-          navigator.serviceWorker.register('sw.js')
-            .then(reg => {
-              console.log('✅ Service Worker registered with scope:', reg.scope);
-            })
-            .catch(err => {
-              console.error('❌ Service Worker registration failed:', err);
-              // Fallback: Try building an absolute URL from current origin if relative path fails.
-              try {
-                const absoluteSwUrl = new URL('sw.js', window.location.origin + window.location.pathname).href;
-                console.warn('Attempting fallback registration with:', absoluteSwUrl);
-                navigator.serviceWorker.register(absoluteSwUrl);
-              } catch (fallbackErr) {
-                console.error('❌ Fallback registration also failed');
-              }
-            });
+          // Robust Service Worker registration for sandboxed environments.
+          // Using window.location.href as the base to resolve sw.js ensures it always matches the current origin.
+          try {
+            const swUrl = new URL('./sw.js', window.location.href).href;
+            navigator.serviceWorker.register(swUrl)
+              .then(reg => {
+                console.log('✅ Service Worker registered with scope:', reg.scope);
+              })
+              .catch(err => {
+                console.error('❌ Service Worker registration failed:', err);
+              });
+          } catch (e) {
+            console.error('❌ Error constructing SW URL:', e);
+          }
         });
       }
     </script>

@@ -56,16 +56,13 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Using a relative URL resolved against the current origin to avoid sandbox mismatch errors
           try {
             const swUrl = new URL('sw.js', window.location.href).href;
             navigator.serviceWorker.register(swUrl)
               .then(reg => console.log('✅ Service Worker Ativo:', reg.scope))
-              .catch(err => {
-                console.warn('❌ Erro no SW (Pode ser bloqueado no ambiente de preview):', err.message);
-              });
+              .catch(err => console.warn('❌ Erro no SW:', err.message));
           } catch (e) {
-            console.warn('Falha ao construir URL do Service Worker');
+            console.warn('Falha ao registrar SW');
           }
         });
       }

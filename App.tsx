@@ -112,7 +112,7 @@ const App: React.FC = () => {
       if (isAnnoyingMode && tasks.some(t => !t.completed)) {
         triggerCoach();
       }
-    }, 60000); // Nag every minute
+    }, 60000); 
     return () => clearInterval(interval);
   }, [isAnnoyingMode, tasks, playNagSound]);
 
@@ -154,20 +154,26 @@ const App: React.FC = () => {
       )}
 
       <div className="px-4 py-6">
-        <div className="bg-white rounded-[2.5rem] p-6 shadow-2xl">
-          <div className="flex justify-between items-end mb-4">
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)]">
+          <div className="flex justify-between items-end mb-6">
             <div>
-              <h2 className="text-[11px] font-black text-amber-600 uppercase tracking-widest">Domínio André</h2>
-              <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
-                {stats.completed} de {stats.total} tarefas cumpridas
-              </p>
+              <h2 className="text-[12px] font-black text-amber-500 uppercase tracking-widest mb-1">Domínio André</h2>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-[#050a18] tracking-tighter">{stats.completed}</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">de</span>
+                <span className="text-xl font-black text-slate-400 tracking-tight">{stats.total}</span>
+                <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">tarefas concluídas</span>
+              </div>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-black text-[#050a18] block leading-none">{stats.percent}%</span>
+              <span className="text-4xl font-black text-[#050a18] block leading-none tracking-tighter">{stats.percent}%</span>
             </div>
           </div>
-          <div className="w-full h-4 bg-amber-50 rounded-full overflow-hidden border border-amber-100/50">
-            <div className="h-full bg-amber-500 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(245,158,11,0.5)]" style={{ width: `${stats.percent}%` }} />
+          <div className="w-full h-5 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-1">
+            <div 
+              className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(245,158,11,0.4)]" 
+              style={{ width: `${stats.percent}%` }} 
+            />
           </div>
         </div>
       </div>
@@ -180,7 +186,7 @@ const App: React.FC = () => {
               <span className="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em]">ALTA PERFORMANCE</span>
             </div>
             <h1 className="text-6xl font-black tracking-tighter leading-none">FOCO<span className="text-amber-500">.</span></h1>
-            <p className="text-slate-400 text-sm font-medium mt-3">André, procrastinar é para amadores.</p>
+            <p className="text-slate-400 text-sm font-medium mt-3 italic">André, o sucesso é alugado, e o aluguel vence todo dia.</p>
           </div>
           <button 
             onClick={() => { setIsAnnoyingMode(!isAnnoyingMode); if(!audioEnabled) setAudioEnabled(true); }} 
@@ -190,14 +196,13 @@ const App: React.FC = () => {
           </button>
         </header>
 
-        {/* Categories Grid */}
         <div className="grid grid-cols-4 gap-2 mb-10">
-          <button onClick={() => setFilterCategoryId(null)} className={`flex flex-col items-center justify-center p-3 rounded-[1.5rem] transition-all h-20 border-2 ${!filterCategoryId ? 'bg-[#3b49df] border-transparent shadow-lg shadow-blue-900/40 scale-105' : 'bg-white text-slate-900 border-transparent hover:scale-102'}`}>
+          <button onClick={() => setFilterCategoryId(null)} className={`flex flex-col items-center justify-center p-3 rounded-[1.5rem] transition-all h-20 border-2 ${!filterCategoryId ? 'bg-[#3b49df] border-transparent shadow-lg scale-105' : 'bg-white text-slate-900 border-transparent hover:scale-102'}`}>
             <LayoutGrid size={22} className="mb-1" />
             <span className="text-[9px] font-black tracking-widest uppercase">TUDO</span>
           </button>
           {categories.slice(0, 3).map(cat => (
-            <button key={cat.id} onClick={() => setFilterCategoryId(cat.id)} className={`flex flex-col items-center justify-center p-3 rounded-[1.5rem] transition-all h-20 border-2 ${filterCategoryId === cat.id ? 'bg-[#3b49df] border-transparent shadow-lg shadow-blue-900/40 scale-105' : 'bg-white text-slate-900 border-transparent hover:scale-102'}`}>
+            <button key={cat.id} onClick={() => setFilterCategoryId(cat.id)} className={`flex flex-col items-center justify-center p-3 rounded-[1.5rem] transition-all h-20 border-2 ${filterCategoryId === cat.id ? 'bg-[#3b49df] border-transparent shadow-lg scale-105' : 'bg-white text-slate-900 border-transparent hover:scale-102'}`}>
               <span className={`${filterCategoryId === cat.id ? 'text-white' : cat.color} mb-1`}>
                 {React.createElement((Icons as any)[cat.iconName] || Tag, { size: 22 })}
               </span>
@@ -206,31 +211,35 @@ const App: React.FC = () => {
           ))}
         </div>
 
-        {/* Add Task UI */}
         <div className="mb-10">
-          <div className={`bg-white rounded-[2.5rem] transition-all shadow-2xl ${isFormExpanded ? 'p-6' : 'p-2 flex items-center h-20'}`}>
+          <div className={`bg-white rounded-[2.5rem] transition-all shadow-2xl ${isFormExpanded ? 'p-8' : 'p-2 flex items-center h-20'}`}>
             {!isFormExpanded ? (
               <>
-                <div onClick={() => setIsFormExpanded(true)} className="flex-1 px-6 cursor-text"><p className="text-slate-400 font-medium">Lembrou de algo, André?</p></div>
+                <div onClick={() => setIsFormExpanded(true)} className="flex-1 px-6 cursor-text text-lg"><p className="text-slate-400 font-bold">Protocolo de hoje, André?</p></div>
                 <button onClick={() => setIsFormExpanded(true)} className="w-16 h-16 bg-[#050a18] text-white rounded-[1.8rem] flex items-center justify-center shadow-lg active:scale-95 transition-all"><Plus size={32}/></button>
               </>
             ) : (
-              <form onSubmit={handleAddTask} className="space-y-4">
-                <div className="flex justify-between items-center"><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Novo Protocolo</span><X onClick={() => setIsFormExpanded(false)} className="text-slate-400 cursor-pointer p-1 hover:text-rose-500 transition-colors"/></div>
-                <input autoFocus type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} className="w-full text-xl font-bold text-[#050a18] outline-none placeholder:text-slate-200" placeholder="O que faremos agora?" />
-                <div className="grid grid-cols-2 gap-2">
-                  <select value={selectedCategoryId} onChange={e => setSelectedCategoryId(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-slate-900 font-bold text-xs outline-none border-none">
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-slate-900 font-bold text-xs outline-none border-none" />
+              <form onSubmit={handleAddTask} className="space-y-6">
+                <div className="flex justify-between items-center"><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Injetar Missão</span><X onClick={() => setIsFormExpanded(false)} className="text-slate-400 cursor-pointer p-1 hover:text-rose-500 transition-colors"/></div>
+                <input autoFocus type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} className="w-full text-2xl font-black text-[#050a18] outline-none placeholder:text-slate-100" placeholder="Qual o alvo?" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-slate-300 uppercase px-1">Setor</p>
+                    <select value={selectedCategoryId} onChange={e => setSelectedCategoryId(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-slate-900 font-black text-xs outline-none border-none">
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-slate-300 uppercase px-1">Prazo</p>
+                    <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl text-slate-900 font-black text-xs outline-none border-none" />
+                  </div>
                 </div>
-                <button type="submit" className="w-full bg-[#3b49df] text-white py-5 rounded-[2rem] font-black text-sm shadow-[0_10px_30px_rgba(59,73,223,0.4)] active:scale-[0.98] transition-all">EXECUTAR AGORA</button>
+                <button type="submit" className="w-full bg-[#3b49df] text-white py-6 rounded-[2rem] font-black text-sm shadow-[0_15px_40px_rgba(59,73,223,0.3)] active:scale-[0.98] transition-all uppercase tracking-widest">Ativar Protocolo</button>
               </form>
             )}
           </div>
         </div>
 
-        {/* Task List */}
         <div className="space-y-4">
           {filteredTasks.map(task => (
             <TaskCard 
@@ -242,39 +251,36 @@ const App: React.FC = () => {
             />
           ))}
           {filteredTasks.length === 0 && (
-            <div className="text-center py-10 opacity-30">
-              <CheckCircle2 size={48} className="mx-auto mb-4" />
-              <p className="font-black text-sm uppercase tracking-widest">Sem pendências. André, você é uma máquina.</p>
+            <div className="text-center py-16 opacity-20">
+              <CheckCircle2 size={64} className="mx-auto mb-4" />
+              <p className="font-black text-sm uppercase tracking-[0.2em]">Território Limpo. André, você venceu.</p>
             </div>
           )}
         </div>
       </main>
 
-      {/* Coach Trigger Button */}
       <div className="fixed bottom-10 right-8 z-50">
         <button 
           onClick={triggerCoach}
-          className="w-20 h-20 bg-white text-slate-900 rounded-[2.2rem] flex items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.8)] border-4 border-[#050a18] hover:scale-110 active:scale-90 transition-all group overflow-hidden"
+          className="w-20 h-20 bg-white text-slate-900 rounded-[2.2rem] flex items-center justify-center shadow-[0_30px_90px_rgba(0,0,0,0.8)] border-4 border-[#050a18] hover:scale-110 active:scale-90 transition-all group overflow-hidden"
         >
           <BrainCircuit size={32} className={`relative z-10 ${isLoadingCoach ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* Nagging Overlay */}
       {showNag && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#050a18]/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-rose-600 p-10 rounded-[3.5rem] text-center shadow-[0_0_80px_rgba(225,29,72,0.6)] border-4 border-rose-400 shake max-w-sm relative">
-            <button onClick={() => setShowNag(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors"><X size={24}/></button>
-            <BrainCircuit size={48} className="mx-auto mb-6 text-white animate-bounce" />
-            <h2 className="text-2xl font-black italic text-white leading-tight">"{nagMessage}"</h2>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#050a18]/95 backdrop-blur-xl animate-in fade-in duration-500">
+          <div className="bg-rose-600 p-12 rounded-[4rem] text-center shadow-[0_0_100px_rgba(225,29,72,0.7)] border-4 border-rose-400 shake max-w-sm relative">
+            <button onClick={() => setShowNag(false)} className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors"><X size={24}/></button>
+            <BrainCircuit size={64} className="mx-auto mb-8 text-white animate-bounce" />
+            <h2 className="text-3xl font-black italic text-white leading-tight tracking-tight">"{nagMessage}"</h2>
           </div>
         </div>
       )}
 
-      {/* PWA Footer Prompt */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#050a18]/90 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl border border-white/10 z-50">
-        <Smartphone size={16} className="text-indigo-400" />
-        <span className="text-[10px] font-black tracking-widest uppercase">Protocolo André Nativo</span>
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#050a18]/90 backdrop-blur-2xl text-white px-8 py-4 rounded-full shadow-2xl border border-white/10 z-50">
+        <Smartphone size={18} className="text-indigo-400" />
+        <span className="text-[10px] font-black tracking-[0.3em] uppercase">Status: André Imparável</span>
       </div>
     </div>
   );

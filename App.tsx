@@ -5,10 +5,8 @@ import {
   BellOff, 
   TrendingUp,
   BrainCircuit,
-  ListTodo,
   LayoutGrid,
   X,
-  Download,
   Smartphone,
   CheckCircle2,
   Stethoscope,
@@ -154,24 +152,31 @@ const App: React.FC = () => {
       )}
 
       <div className="px-4 py-6">
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)]">
-          <div className="flex justify-between items-end mb-6">
-            <div>
-              <h2 className="text-[12px] font-black text-amber-500 uppercase tracking-widest mb-1">Domínio André</h2>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-[#050a18] tracking-tighter">{stats.completed}</span>
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">de</span>
-                <span className="text-xl font-black text-slate-400 tracking-tight">{stats.total}</span>
-                <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase tracking-widest">tarefas concluídas</span>
+        <div className="bg-white rounded-[3rem] p-8 shadow-[0_30px_70px_-15px_rgba(0,0,0,0.6)]">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex flex-col">
+              <h2 className="text-[11px] font-black text-amber-500 uppercase tracking-[0.2em] mb-2">Domínio André</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-5xl font-black text-[#050a18] tracking-tighter leading-none">{stats.completed}</span>
+                <span className="text-xl font-black text-slate-200 tracking-tighter self-end mb-1">/</span>
+                <span className="text-2xl font-black text-slate-400 tracking-tighter self-end mb-1">{stats.total}</span>
               </div>
+              <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-2">Missões Cumpridas</p>
             </div>
-            <div className="text-right">
-              <span className="text-4xl font-black text-[#050a18] block leading-none tracking-tighter">{stats.percent}%</span>
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-1">
+                <span className="text-5xl font-black text-[#050a18] tracking-tighter leading-none">{stats.percent}</span>
+                <span className="text-2xl font-black text-amber-500 tracking-tighter self-start mt-1">%</span>
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                <div className={`w-2 h-2 rounded-full ${stats.percent === 100 ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`}></div>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Status de Missão</span>
+              </div>
             </div>
           </div>
           <div className="w-full h-5 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-1">
             <div 
-              className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(245,158,11,0.4)]" 
+              className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(245,158,11,0.4)] ${stats.percent === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}
               style={{ width: `${stats.percent}%` }} 
             />
           </div>

@@ -1,4 +1,3 @@
-
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "firebase/messaging";
@@ -34,11 +33,16 @@ export const getSafeAnalytics = async () => {
 
 export const getSafeMessaging = async () => {
   if (typeof window === 'undefined') return null;
+  if (messagingInstance) return messagingInstance;
+  
   try {
     const supported = await isMessagingSupported();
     if (supported) {
       messagingInstance = getMessaging(app);
+      
+      // Setup foreground messaging immediately upon safe acquisition
       onMessage(messagingInstance, (payload) => {
+        console.log('Message received in foreground: ', payload);
         if (Notification.permission === 'granted') {
           new Notification(payload.notification?.title || 'FOCO', {
             body: payload.notification?.body,
@@ -46,12 +50,15 @@ export const getSafeMessaging = async () => {
           });
         }
       });
+      
       return messagingInstance;
+    } else {
+      return null;
     }
   } catch (err) {
-    console.warn("Messaging not supported:", err);
+    console.warn("Messaging not supported or failed to init:", err);
+    return null;
   }
-  return null;
 };
 
 export const requestNotificationPermission = async () => {

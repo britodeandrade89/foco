@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>FOCO - André Elite</title>
+    <title>FOCO - André's Task Master</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/3593/3593505.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,6 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
       * {
         font-family: 'Inter', sans-serif !important;
@@ -22,16 +24,34 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-      *::-webkit-scrollbar { display: none; }
-      body { background-color: #050a18; overscroll-behavior-y: contain; color: #ffffff; }
-      .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+
+      *::-webkit-scrollbar {
+        display: none;
+      }
+      
+      body {
+        background-color: #050a18;
+        overscroll-behavior-y: contain;
+        color: #ffffff;
+      }
+
+      .shake {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+      }
+
       @keyframes shake {
         10%, 90% { transform: translate3d(-1px, 0, 0); }
         20%, 80% { transform: translate3d(2px, 0, 0); }
         30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
         40%, 60% { transform: translate3d(4px, 0, 0); }
       }
+
+      html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
     </style>
+    
     <script type="importmap">
 {
   "imports": {
@@ -56,14 +76,9 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          try {
-            const swUrl = new URL('sw.js', window.location.href).href;
-            navigator.serviceWorker.register(swUrl)
-              .then(reg => console.log('✅ Service Worker Ativo:', reg.scope))
-              .catch(err => console.warn('❌ Erro no SW:', err.message));
-          } catch (e) {
-            console.warn('Falha ao registrar SW');
-          }
+          navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('✅ Service Worker Ativo:', reg.scope))
+            .catch(err => console.warn('❌ Erro no SW:', err.message));
         });
       }
     </script>

@@ -1,5 +1,4 @@
-/// <reference types="vite/client" />
-
+// Removed reference to vite/client to avoid type definition errors
 declare namespace NodeJS {
   interface ProcessEnv {
     readonly API_KEY: string;

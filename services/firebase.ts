@@ -26,6 +26,11 @@ let analyticsInstance: any = null;
 let messagingInstance: any = null;
 
 export const getSafeAnalytics = async () => {
+  // DESABILITADO: Previne erro 403 da API Installations. 
+  // O projeto do Firebase precisa ter a API habilitada no console para isso funcionar.
+  return null;
+  
+  /* Código original mantido comentado para referência futura
   if (!app || typeof window === 'undefined') return null;
   
   try {
@@ -35,13 +40,17 @@ export const getSafeAnalytics = async () => {
       return analyticsInstance;
     }
   } catch (err) {
-    // Retorna null silenciosamente se falhar
     return null;
   }
   return null;
+  */
 };
 
 export const getSafeMessaging = async () => {
+  // DESABILITADO: Previne erro 403 da API Installations.
+  return null;
+
+  /*
   if (!app || typeof window === 'undefined') return null;
   if (messagingInstance) return messagingInstance;
   
@@ -68,9 +77,13 @@ export const getSafeMessaging = async () => {
     return null;
   }
   return null;
+  */
 };
 
 export const requestNotificationPermission = async () => {
+  return false; // Notificações desabilitadas preventivamente
+
+  /*
   if (typeof window === 'undefined' || !('Notification' in window)) return false;
   
   try {
@@ -84,7 +97,6 @@ export const requestNotificationPermission = async () => {
           });
           if (token) console.log('Token OK');
         } catch (tokenErr) {
-          // Token falhou (normal se não configurado)
         }
       }
     }
@@ -92,6 +104,7 @@ export const requestNotificationPermission = async () => {
   } catch (err) {
     return false;
   }
+  */
 };
 
 export { app };

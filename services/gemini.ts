@@ -1,18 +1,14 @@
-import { GoogleGenAI } from "@google/genai";
+
+import { GoogleGenAI, Type } from "@google/genai";
 import { Task } from "../types";
 
-// Inicialização segura: Se a API Key não estiver no .env (comum em deploys novos),
-// usa uma string vazia para não quebrar o construtor, e falha graciosamente na chamada.
-const apiKey = process.env.API_KEY || "";
-const ai = new GoogleGenAI({ apiKey });
+// Always use new GoogleGenAI({apiKey: process.env.API_KEY});
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getNaggingMessage = async (pendingTasks: Task[]): Promise<string> => {
   if (pendingTasks.length === 0) return "Parabéns, André. Por enquanto você está limpo. Não se acostume.";
-  if (!apiKey) {
-    console.warn("API Key do Gemini não configurada.");
-    return "André, configure a API Key no Vercel para eu poder te xingar corretamente.";
-  }
 
+  // Fix: changed t.category to t.categoryId as t.category does not exist on Task type
   const taskList = pendingTasks.map(t => `- [${t.categoryId}] ${t.text}`).join('\n');
   
   const prompt = `
@@ -36,21 +32,15 @@ export const getNaggingMessage = async (pendingTasks: Task[]): Promise<string> =
       },
     });
 
-    return response.text?.trim() || "VAI TRABALHAR, ANDRÉ!";
+    return response.text.trim() || "VAI TRABALHAR, ANDRÉ!";
   } catch (error) {
     console.error("Gemini Error:", error);
-    const fallbacks = [
-      "André, pare de olhar para mim e termine essas tarefas!",
-      "O tempo está passando, André!",
-      "Menos desculpas, mais ação."
-    ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    return "André, pare de olhar para mim e termine essas tarefas!";
   }
 };
 
 export const getTaskInsight = async (task: Task): Promise<string> => {
-  if (!apiKey) return "Foco no objetivo!";
-  
+  // Fix: changed task.category to task.categoryId
   const prompt = `Dê uma dica rápida ou curiosidade sobre esta tarefa: "${task.text}" da categoria "${task.categoryId}". Seja breve.`;
   
   try {
@@ -59,7 +49,7 @@ export const getTaskInsight = async (task: Task): Promise<string> => {
       contents: prompt,
       config: { temperature: 0.7 }
     });
-    return response.text?.trim() || "Foco no objetivo!";
+    return response.text.trim();
   } catch {
     return "Foco no objetivo!";
   }

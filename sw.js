@@ -1,12 +1,10 @@
-// Service Worker FOCO App - v8
-const CACHE_NAME = 'foco-andre-v8';
+
+const CACHE_NAME = 'foco-andre-v4';
 const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'
+  '/',
+  '/index.html',
+  '/manifest.json',
+  'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -29,42 +27,19 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return;
-
-  // Stale-While-Revalidate Strategy
-  // 1. Return cached response immediately if available.
-  // 2. Fetch from network in the background.
-  // 3. Update cache with new network response.
+  // Evita cachear chamadas da API
+  if (event.request.url.includes('googleapis.com')) {
+    return;
+  }
+  
   event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request)
-          .then((networkResponse) => {
-            // Check if valid response (allow basic and cors)
-            if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
-              return networkResponse;
-            }
-
-            // Update cache with the new response
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          })
-          .catch((err) => {
-            // Network failed, nothing to update in cache. 
-            // If cachedResponse was null, this is where we'd fallback to an offline page if we had one.
-            // console.warn('Fetch failed:', err);
-          });
-
-        // Return cached response if found, else wait for network
-        return cachedResponse || fetchPromise;
-      });
-    })
+    caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
 
+// Lógica de Push Notification
 self.addEventListener('push', (event) => {
-  let data = { title: 'FOCO', body: 'Hora de trabalhar!' };
+  let data = { title: 'FOCO: André!', body: 'Vá trabalhar agora!' };
   
   if (event.data) {
     try {
@@ -79,7 +54,10 @@ self.addEventListener('push', (event) => {
     icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
     badge: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
     vibrate: [200, 100, 200],
-    data: { url: '/' }
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: '1'
+    }
   };
 
   event.waitUntil(
@@ -90,15 +68,13 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing window if available
+    clients.matchAll({type: 'window'}).then(windowClients => {
       for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
+        let client = windowClients[i];
         if (client.url === '/' && 'focus' in client) {
           return client.focus();
         }
       }
-      // Open new window if not
       if (clients.openWindow) {
         return clients.openWindow('/');
       }

@@ -1,7 +1,8 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './services/firebase';
+import './services/firebase'; // Inicializa o Firebase ao carregar
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

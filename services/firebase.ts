@@ -24,7 +24,7 @@ export const getSafeAnalytics = async () => {
     const supported = await isAnalyticsSupported();
     if (supported) return getAnalytics(app);
   } catch (err) {
-    console.error("Analytics error:", err);
+    // Silencia erros de analytics para não poluir o console do usuário
   }
   return null;
 };
@@ -50,7 +50,7 @@ export const getSafeMessaging = async () => {
       return messaging;
     }
   } catch (err) {
-    console.warn("Messaging not supported.");
+    // Messaging não suportado ou bloqueado
   }
   return null;
 };
@@ -63,15 +63,31 @@ export const requestNotificationPermission = async () => {
     if (permission === 'granted') {
       const messaging = await getSafeMessaging();
       if (messaging) {
-        const token = await getToken(messaging, {
-          vapidKey: 'BLe-R-p-Lh-8mK3_yQ-uP-B6_tY-Y-Y-Y-Y-Y-Y-Y'
-        });
-        console.log('FCM Token:', token);
+        try {
+          const token = await getToken(messaging, {
+            vapidKey: 'BLe-R-p-Lh-8mK3_yQ-uP-B6_tY-Y-Y-Y-Y-Y-Y-Y'
+          });
+          console.log('FCM Token:', token);
+        } catch (tokenErr: any) {
+          // Trata especificamente o erro 403 PERMISSION_DENIED da API de Installations
+          const isInstallError = tokenErr.message?.includes('403') || 
+                                 tokenErr.code?.includes('installations') || 
+                                 tokenErr.message?.includes('PERMISSION_DENIED');
+                                 
+          if (isInstallError) {
+            console.warn(
+              '⚠️ FOCO: Para ativar as notificações push, você precisa habilitar a "Firebase Installations API" no console do Google Cloud para o projeto: ' + firebaseConfig.projectId + 
+              '. Acesse: https://console.developers.google.com/apis/api/firebaseinstallations.googleapis.com/overview?project=' + firebaseConfig.projectId
+            );
+          } else {
+            console.error('FCM Token error:', tokenErr);
+          }
+        }
       }
       return true;
     }
   } catch (err) {
-    console.error('Permission error:', err);
+    console.error('Permission request error:', err);
   }
   return false;
 };

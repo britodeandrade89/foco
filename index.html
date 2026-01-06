@@ -69,13 +69,19 @@
   <body class="overflow-x-hidden">
     <div id="root"></div>
     <script>
-      // O sistema importa o index.tsx automaticamente. 
-      // Não remova este script de registro do SW
+      // Registro do Service Worker usando caminho relativo para evitar erro de Origin Mismatch no Sandbox
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(reg => console.log('✅ Service Worker Ativo:', reg.scope))
-            .catch(err => console.error('❌ Erro no Service Worker:', err));
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+              console.log('✅ Service Worker Registrado');
+              if (reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+            })
+            .catch(err => {
+              console.warn('⚠️ Erro SW (Normal em ambiente de desenvolvimento):', err.message);
+            });
         });
       }
     </script>

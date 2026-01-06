@@ -12,13 +12,19 @@ const firebaseConfig = {
   measurementId: "G-MRBDJC3QXZ"
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Inicialização segura do app
+let app: any;
+try {
+  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+} catch (e) {
+  console.warn("Falha ao inicializar Firebase App (Ignorando):", e);
+}
 
 let analyticsInstance: any = null;
 let messagingInstance: any = null;
 
 export const getSafeAnalytics = async () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined' || !app) return null;
   try {
     const supported = await isAnalyticsSupported();
     if (supported) {
@@ -26,13 +32,14 @@ export const getSafeAnalytics = async () => {
       return analyticsInstance;
     }
   } catch (err) {
-    console.warn("Analytics not supported:", err);
+    // Silencia erros de permissão/configuração para não poluir o console ou travar o app
+    console.debug("Analytics ignorado (possível bloqueio de API ou AdBlock):", err);
   }
   return null;
 };
 
 export const getSafeMessaging = async () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined' || !app) return null;
   if (messagingInstance) return messagingInstance;
   
   try {
@@ -40,9 +47,8 @@ export const getSafeMessaging = async () => {
     if (supported) {
       messagingInstance = getMessaging(app);
       
-      // Setup foreground messaging immediately upon safe acquisition
       onMessage(messagingInstance, (payload) => {
-        console.log('Message received in foreground: ', payload);
+        console.log('Message received:', payload);
         if (Notification.permission === 'granted') {
           new Notification(payload.notification?.title || 'FOCO', {
             body: payload.notification?.body,
@@ -52,13 +58,11 @@ export const getSafeMessaging = async () => {
       });
       
       return messagingInstance;
-    } else {
-      return null;
     }
   } catch (err) {
-    console.warn("Messaging not supported or failed to init:", err);
-    return null;
+    console.debug("Messaging ignorado (possível erro de API ou suporte):", err);
   }
+  return null;
 };
 
 export const requestNotificationPermission = async () => {
@@ -69,20 +73,21 @@ export const requestNotificationPermission = async () => {
     if (permission === 'granted') {
       const messaging = await getSafeMessaging();
       if (messaging) {
-        // VAPID Key: Substitua pela chave real do seu console Firebase Cloud Messaging se necessário.
         try {
+          // Tenta pegar o token, mas silencia falhas de API (403)
           const token = await getToken(messaging, {
             vapidKey: 'BCS_8X5Y3X_jW_X_X_X_X_X_X_X_X_X_X_X_X_X' 
           });
-          console.log('Push Token gerado:', token);
+          console.log('Push Token:', token);
         } catch (tokenErr) {
-          console.warn('Erro ao obter token Push (possível VAPID inválida):', tokenErr);
+          // Erro esperado se a API não estiver habilitada no console
+          console.debug('Push Token não gerado (API desabilitada ou erro de rede):', tokenErr);
         }
       }
     }
     return permission === 'granted';
   } catch (err) {
-    console.error('Permission request failed:', err);
+    console.debug('Erro na solicitação de permissão:', err);
     return false;
   }
 };

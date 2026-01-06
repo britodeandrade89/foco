@@ -1,5 +1,5 @@
-// Service Worker FOCO App - v12
-const CACHE_NAME = 'foco-cache-v12';
+// Service Worker FOCO App - v13
+const CACHE_NAME = 'foco-cache-v13';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,10 +11,7 @@ const ASSETS_TO_CACHE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // Usamos paths relativos aqui para evitar erros de origin
-      return cache.addAll(ASSETS_TO_CACHE).catch(err => console.warn('Cache addAll warning:', err));
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE).catch(() => {}))
   );
   self.skipWaiting();
 });
@@ -24,9 +21,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
     })
@@ -34,60 +29,45 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Estratégia Stale-While-Revalidate com tratamento para Cross-Origin
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  if (event.request.url.startsWith('chrome-extension') || event.request.url.includes('_vercel')) return;
-
+  
   event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            // Não cacheamos o index.tsx diretamente se o header for octet-stream
-            const contentType = networkResponse.headers.get('content-type');
-            if (contentType && !contentType.includes('application/octet-stream')) {
-              cache.put(event.request, networkResponse.clone());
-            }
-          }
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
+      
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
-        }).catch(() => cachedResponse);
-
-        return cachedResponse || fetchPromise;
-      });
+        }
+        
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          // Não cacheia se for o erro de MIME type ou scripts de terceiros instáveis
+          const ct = responseToCache.headers.get('content-type');
+          if (ct && !ct.includes('application/octet-stream')) {
+            cache.put(event.request, responseToCache);
+          }
+        });
+        
+        return networkResponse;
+      }).catch(() => null);
     })
   );
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'FOCO', body: 'Hora de agir, André!' };
-  if (event.data) {
-    try { data = event.data.json(); } catch (e) { data = { title: 'FOCO', body: event.data.text() }; }
-  }
-  const options = {
-    body: data.body,
-    icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
-    badge: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
-    vibrate: [200, 100, 200],
-    data: { url: '/' }
-  };
-  event.waitUntil(self.registration.showNotification(data.title, options));
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
+  let data = { title: 'FOCO', body: 'Hora de agir!' };
+  try { data = event.data.json(); } catch(e) {}
+  
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (let client of windowClients) {
-        if (client.url === '/' && 'focus' in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow('/');
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
     })
   );
 });

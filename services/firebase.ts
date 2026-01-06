@@ -24,7 +24,7 @@ export const getSafeAnalytics = async () => {
     const supported = await isAnalyticsSupported();
     if (supported) return getAnalytics(app);
   } catch (err) {
-    // Silencia erros de analytics para não poluir o console do usuário
+    // Analytics opcional
   }
   return null;
 };
@@ -50,7 +50,7 @@ export const getSafeMessaging = async () => {
       return messaging;
     }
   } catch (err) {
-    // Messaging não suportado ou bloqueado
+    // Messaging opcional
   }
   return null;
 };
@@ -69,18 +69,12 @@ export const requestNotificationPermission = async () => {
           });
           console.log('FCM Token:', token);
         } catch (tokenErr: any) {
-          // Trata especificamente o erro 403 PERMISSION_DENIED da API de Installations
-          const isInstallError = tokenErr.message?.includes('403') || 
-                                 tokenErr.code?.includes('installations') || 
-                                 tokenErr.message?.includes('PERMISSION_DENIED');
-                                 
-          if (isInstallError) {
-            console.warn(
-              '⚠️ FOCO: Para ativar as notificações push, você precisa habilitar a "Firebase Installations API" no console do Google Cloud para o projeto: ' + firebaseConfig.projectId + 
-              '. Acesse: https://console.developers.google.com/apis/api/firebaseinstallations.googleapis.com/overview?project=' + firebaseConfig.projectId
-            );
+          // Detecta especificamente falha na API de Installations (Erro 403)
+          const msg = tokenErr.message || "";
+          if (msg.includes('403') || msg.includes('installations') || msg.includes('PERMISSION_DENIED')) {
+            console.warn('⚠️ FOCO: Para habilitar notificações, ative a "Firebase Installations API" no console do Google Cloud.');
           } else {
-            console.error('FCM Token error:', tokenErr);
+            console.error('FCM error:', tokenErr);
           }
         }
       }

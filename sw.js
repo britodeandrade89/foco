@@ -1,5 +1,5 @@
-// Service Worker FOCO App - v7
-const CACHE_NAME = 'foco-andre-v7';
+// Service Worker FOCO App - v8
+const CACHE_NAME = 'foco-andre-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -29,28 +29,36 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignora chamadas que não sejam GET ou que sejam para APIs externas (exceto as que queremos cachear explicitamente se houver)
+  // Only handle GET requests
   if (event.request.method !== 'GET') return;
-  
-  // Estratégia Stale-While-Revalidate para assets estáticos
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Verifica validade
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
-        }
-        // Atualiza cache
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return networkResponse;
-      }).catch(() => {
-        // Se falhar o fetch e não tiver cache
-      });
 
-      return cachedResponse || fetchPromise;
+  // Stale-While-Revalidate Strategy
+  // 1. Return cached response immediately if available.
+  // 2. Fetch from network in the background.
+  // 3. Update cache with new network response.
+  event.respondWith(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request)
+          .then((networkResponse) => {
+            // Check if valid response (allow basic and cors)
+            if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
+              return networkResponse;
+            }
+
+            // Update cache with the new response
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          })
+          .catch((err) => {
+            // Network failed, nothing to update in cache. 
+            // If cachedResponse was null, this is where we'd fallback to an offline page if we had one.
+            // console.warn('Fetch failed:', err);
+          });
+
+        // Return cached response if found, else wait for network
+        return cachedResponse || fetchPromise;
+      });
     })
   );
 });
@@ -83,14 +91,14 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Se já tiver uma aba aberta, foca nela
+      // Focus existing window if available
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
         if (client.url === '/' && 'focus' in client) {
           return client.focus();
         }
       }
-      // Se não, abre uma nova
+      // Open new window if not
       if (clients.openWindow) {
         return clients.openWindow('/');
       }

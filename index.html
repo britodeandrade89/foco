@@ -89,16 +89,13 @@
               window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
             );
 
-            if (window.location.protocol === 'https:' || isLocalhost) {
-               navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('✅ SW'))
-                .catch(err => {
-                  if (!err.message.includes('origin')) {
-                    console.warn('SW Info:', err.message);
-                  }
-                });
-            }
-          } catch (e) {}
+            // Register SW in production or localhost
+            navigator.serviceWorker.register('/sw.js')
+              .then(reg => console.log('✅ SW Registered'))
+              .catch(err => console.warn('SW Register Failed:', err));
+          } catch (e) {
+            console.error('SW Error:', e);
+          }
         });
       }
     </script>

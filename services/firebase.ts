@@ -11,7 +11,6 @@ const firebaseConfig = {
 };
 
 // Inicialização segura e silenciosa do app
-// Se falhar (erro 403, config inválida), app permanece null e o resto do sistema ignora o Firebase
 let app: any = null;
 try {
   if (typeof window !== 'undefined') {
@@ -22,8 +21,7 @@ try {
   app = null;
 }
 
-// Funções de exportação seguras que retornam null imediatamente
-// Isso resolve o erro "Installations: Create Installation request failed with error 403"
+// Funções de exportação seguras
 export const getSafeAnalytics = async () => {
   return null;
 };
@@ -33,7 +31,17 @@ export const getSafeMessaging = async () => {
 };
 
 export const requestNotificationPermission = async () => {
-  return false;
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return false;
+  }
+  
+  try {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  } catch (error) {
+    console.error("Erro ao solicitar permissão de notificação:", error);
+    return false;
+  }
 };
 
 export { app };

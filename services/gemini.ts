@@ -1,15 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Task } from "../types";
 
-// FIX: Initialize Gemini client directly using process.env.API_KEY as per guidelines.
-// The API key is assumed to be present and valid.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Inicialização segura: Se a API Key não estiver no .env (comum em deploys novos),
+// usa uma string vazia para não quebrar o construtor, e falha graciosamente na chamada.
+const apiKey = process.env.API_KEY || "";
+const ai = new GoogleGenAI({ apiKey });
 
 export const getNaggingMessage = async (pendingTasks: Task[]): Promise<string> => {
   if (pendingTasks.length === 0) return "Parabéns, André. Por enquanto você está limpo. Não se acostume.";
-  
-  // FIX: Removed unnecessary null check for 'ai' as it is now always initialized.
-  
+  if (!apiKey) {
+    console.warn("API Key do Gemini não configurada.");
+    return "André, configure a API Key no Vercel para eu poder te xingar corretamente.";
+  }
+
   const taskList = pendingTasks.map(t => `- [${t.categoryId}] ${t.text}`).join('\n');
   
   const prompt = `
@@ -24,7 +27,7 @@ export const getNaggingMessage = async (pendingTasks: Task[]): Promise<string> =
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', // Usando versão preview mais recente conforme guidelines
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         temperature: 0.9,
@@ -36,7 +39,6 @@ export const getNaggingMessage = async (pendingTasks: Task[]): Promise<string> =
     return response.text?.trim() || "VAI TRABALHAR, ANDRÉ!";
   } catch (error) {
     console.error("Gemini Error:", error);
-    // Mensagens de fallback variadas para não ficar repetitivo se offline
     const fallbacks = [
       "André, pare de olhar para mim e termine essas tarefas!",
       "O tempo está passando, André!",
@@ -47,7 +49,7 @@ export const getNaggingMessage = async (pendingTasks: Task[]): Promise<string> =
 };
 
 export const getTaskInsight = async (task: Task): Promise<string> => {
-  // FIX: Removed unnecessary null check for 'ai'.
+  if (!apiKey) return "Foco no objetivo!";
   
   const prompt = `Dê uma dica rápida ou curiosidade sobre esta tarefa: "${task.text}" da categoria "${task.categoryId}". Seja breve.`;
   

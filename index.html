@@ -54,14 +54,14 @@
   <script type="importmap">
 {
   "imports": {
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
@@ -72,7 +72,6 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Proteção contra erro de origem em ambientes de preview
           try {
             const isLocalhost = Boolean(
               window.location.hostname === 'localhost' ||
@@ -80,20 +79,16 @@
               window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
             );
 
-            // Tenta registrar apenas se for seguro ou localhost
             if (window.location.protocol === 'https:' || isLocalhost) {
                navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('✅ Service Worker Ativo'))
+                .then(reg => console.log('✅ SW'))
                 .catch(err => {
-                  // Ignora erros silenciosamente para não poluir o console do usuário
                   if (!err.message.includes('origin')) {
-                    console.warn('Info SW:', err.message);
+                    console.warn('SW Info:', err.message);
                   }
                 });
             }
-          } catch (e) {
-            // Falha silenciosa intencional
-          }
+          } catch (e) {}
         });
       }
     </script>

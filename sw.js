@@ -1,17 +1,15 @@
-// Service Worker FOCO App - v13
-const CACHE_NAME = 'foco-cache-v13';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'
+
+const CACHE_NAME = 'foco-andre-v4';
+const ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE).catch(() => {}))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
@@ -20,9 +18,8 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
-        })
+        cacheNames.filter((cacheName) => cacheName !== CACHE_NAME)
+                  .map((cacheName) => caches.delete(cacheName))
       );
     })
   );
@@ -30,44 +27,57 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  // Evita cachear chamadas da API
+  if (event.request.url.includes('googleapis.com')) {
+    return;
+  }
   
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-      
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
-        }
-        
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          // Não cacheia se for o erro de MIME type ou scripts de terceiros instáveis
-          const ct = responseToCache.headers.get('content-type');
-          if (ct && !ct.includes('application/octet-stream')) {
-            cache.put(event.request, responseToCache);
-          }
-        });
-        
-        return networkResponse;
-      }).catch(() => null);
-    })
+    caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+// Lógica de Push Notification
+self.addEventListener('push', (event) => {
+  let data = { title: 'FOCO: André!', body: 'Vá trabalhar agora!' };
+  
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'FOCO', body: event.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
+    badge: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png',
+    vibrate: [200, 100, 200],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: '1'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
 });
 
-self.addEventListener('push', (event) => {
-  let data = { title: 'FOCO', body: 'Hora de agir!' };
-  try { data = event.data.json(); } catch(e) {}
-  
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593505.png'
+    clients.matchAll({type: 'window'}).then(windowClients => {
+      for (let i = 0; i < windowClients.length; i++) {
+        let client = windowClients[i];
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
     })
   );
 });

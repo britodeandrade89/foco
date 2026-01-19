@@ -1,3 +1,4 @@
+
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "firebase/messaging";
@@ -15,16 +16,24 @@ const firebaseConfig = {
 // Singleton pattern for Firebase app
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
+let analyticsInstance: any = null;
+let messagingInstance: any = null;
+
 /**
  * Safely initialize Analytics
  */
 export const getSafeAnalytics = async () => {
   if (typeof window === 'undefined') return null;
+  if (analyticsInstance) return analyticsInstance;
+  
   try {
     const supported = await isAnalyticsSupported();
-    if (supported) return getAnalytics(app);
+    if (supported) {
+      analyticsInstance = getAnalytics(app);
+      return analyticsInstance;
+    }
   } catch (err) {
-    // Analytics opcional
+    console.error("Analytics init error:", err);
   }
   return null;
 };
@@ -34,12 +43,16 @@ export const getSafeAnalytics = async () => {
  */
 export const getSafeMessaging = async () => {
   if (typeof window === 'undefined') return null;
+  if (messagingInstance) return messagingInstance;
+  
   try {
     const supported = await isMessagingSupported();
     if (supported) {
-      const messaging = getMessaging(app);
-      onMessage(messaging, (payload) => {
-        console.log('Foreground message:', payload);
+      messagingInstance = getMessaging(app);
+      
+      // Setup foreground messaging immediately upon safe acquisition
+      onMessage(messagingInstance, (payload) => {
+        console.log('Message received in foreground: ', payload);
         if (Notification.permission === 'granted') {
           new Notification(payload.notification?.title || 'FOCO', {
             body: payload.notification?.body,
@@ -47,10 +60,11 @@ export const getSafeMessaging = async () => {
           });
         }
       });
-      return messaging;
+      
+      return messagingInstance;
     }
   } catch (err) {
-    // Messaging opcional
+    console.warn("Messaging service not available in this environment:", err);
   }
   return null;
 };
@@ -58,32 +72,23 @@ export const getSafeMessaging = async () => {
 export const requestNotificationPermission = async () => {
   if (typeof window === 'undefined' || !('Notification' in window)) return false;
   
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      const messaging = await getSafeMessaging();
-      if (messaging) {
-        try {
-          const token = await getToken(messaging, {
-            vapidKey: 'BLe-R-p-Lh-8mK3_yQ-uP-B6_tY-Y-Y-Y-Y-Y-Y-Y'
-          });
-          console.log('FCM Token:', token);
-        } catch (tokenErr: any) {
-          // Detecta especificamente falha na API de Installations (Erro 403)
-          const msg = tokenErr.message || "";
-          if (msg.includes('403') || msg.includes('installations') || msg.includes('PERMISSION_DENIED')) {
-            console.warn('⚠️ FOCO: Para habilitar notificações, ative a "Firebase Installations API" no console do Google Cloud.');
-          } else {
-            console.error('FCM error:', tokenErr);
-          }
-        }
+  const permission = await Notification.requestPermission();
+  if (permission === 'granted') {
+    const messaging = await getSafeMessaging();
+    if (messaging) {
+      try {
+        const token = await getToken(messaging, {
+          vapidKey: 'BLe-R-p-Lh-8mK3_yQ-uP-B6_tY-Y-Y-Y-Y-Y-Y-Y'
+        });
+        console.log('FCM Token:', token);
+        return true;
+      } catch (err) {
+        console.error('Error obtaining FCM token:', err);
+        return true; // Still return true if permission granted even if token fails
       }
-      return true;
     }
-  } catch (err) {
-    console.error('Permission request error:', err);
   }
-  return false;
+  return permission === 'granted';
 };
 
 export { app };
